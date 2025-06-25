@@ -4,35 +4,22 @@ import ChatInterface from './components/ChatInterface';
 import ProductList from './components/ProductList';
 import BundleSuggestion from './components/BundleSuggestion';
 import Checkout from './components/Checkout';
+import PurchaseHistory from './components/PurchaseHistory';
 
 function App() {
   const [stage, setStage] = useState("welcome");
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedBundles, setSelectedBundles] = useState([]);
 
-  const handleSearch = (aiReply) => {
-    try {
-      const parsedProducts = JSON.parse(aiReply);
-
-      if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
-        // Add unique IDs if not already present
-        const productsWithId = parsedProducts.map((p, index) => ({
-          id: index + 1,
-          name: p.name,
-          price: p.price,
-          stock: p.stock || Math.floor(Math.random() * 10) + 5
-        }));
-
-        setProducts(productsWithId);
-        setStage("product");
-      } else {
-        alert("AI returned no valid products.");
-      }
-
-    } catch (err) {
-      console.error("JSON parsing error:", err);
-      alert("Failed to parse AI response.");
+  const handleSearch = (productList) => {
+    if (!productList || productList.length === 0) {
+      alert("⚠️ No products found.");
+      setStage("chat");
+      return;
     }
+    setProducts(productList);
+    setStage("product");
   };
 
   const handleSelectProduct = (product) => {
@@ -40,27 +27,33 @@ function App() {
     setStage("bundle");
   };
 
-  const handleCheckout = () => {
+  const handleProceedToCheckout = (selected) => {
+    setSelectedBundles(selected);
     setStage("checkout");
   };
 
+  const handleRestart = () => {
+    setProducts([]);
+    setSelectedProduct(null);
+    setSelectedBundles([]);
+    setStage("welcome");
+  };
+
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-green-100 via-white to-blue-100">
-      {stage === "welcome" && <Welcome startShopping={() => setStage("chat")} />}
+    <div className="min-h-screen w-full bg-gradient-to-br from-green-100 via-white to-blue-100 font-sans">
+      
+      {stage === "welcome" && (
+        <Welcome 
+          startShopping={() => setStage("chat")} 
+          goToHistory={() => setStage("history")} 
+        />
+      )}
+
       {stage === "chat" && <ChatInterface onSearch={handleSearch} />}
-      {stage === "product" && (
-        <ProductList 
-          products={products} 
-          onSelectProduct={handleSelectProduct} 
-        />
-      )}
-      {stage === "bundle" && (
-        <BundleSuggestion 
-          product={selectedProduct} 
-          proceedToCheckout={handleCheckout} 
-        />
-      )}
-      {stage === "checkout" && <Checkout />}
+      {stage === "product" && <ProductList products={products} onSelectProduct={handleSelectProduct} />}
+      {stage === "bundle" && <BundleSuggestion product={selectedProduct} proceedToCheckout={handleProceedToCheckout} />}
+      {stage === "checkout" && <Checkout product={selectedProduct} selectedBundles={selectedBundles} goHome={handleRestart} />}
+      {stage === "history" && <PurchaseHistory goHome={handleRestart} />}
     </div>
   );
 }
